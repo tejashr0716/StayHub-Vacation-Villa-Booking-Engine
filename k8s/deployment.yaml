@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stayhub-engine
+  namespace: production
+  labels:
+    app: stayhub-engine
+    tier: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: stayhub-engine
+  template:
+    metadata:
+      labels:
+        app: stayhub-engine
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3009"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: app
+          image: tejashr/stayhub-engine:v2.4
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3009
+              name: http
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3009"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3009
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 3009
+            initialDelaySeconds: 5
+            periodSeconds: 5
